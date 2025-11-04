@@ -12,4 +12,6 @@ router.route('/logout').post(verifyAuth, logoutUser);
 
 
 
+
+
 export default router;
