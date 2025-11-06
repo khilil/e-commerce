@@ -6,13 +6,12 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const createProduct = asyncHandler(async (req, res) => {
-    const { title, price, stock, category, rating } = req.body
+    const { title, description, price, stock, category, rating } = req.body
 
     // ✅ validate fields
     if (!title?.trim() || price == null || stock == null) {
         throw new ApiError(400, "All required fields are mandatory");
     }
-
 
     // ✅ check duplicates
     const existingProduct = await productModel.findOne({ title });
@@ -22,7 +21,7 @@ const createProduct = asyncHandler(async (req, res) => {
 
     // ✅ handle images (Multer + Cloudinary)
     const imagePaths = req.files?.images?.map(f => f.path) || [];
-    console.log(imagePaths);
+    // console.log(imagePaths);
 
     if (imagePaths.length === 0) {
         throw new ApiError(400, "Product image is required");
@@ -32,7 +31,7 @@ const createProduct = asyncHandler(async (req, res) => {
 
     for (const path of imagePaths) {
         const uploaded = await uploadOnCloudinary(path);
-        console.log(uploaded);
+        // console.log(uploaded);
 
         if (uploaded?.secure_url) uploadedImages.push(uploaded.secure_url);
     }
@@ -51,6 +50,7 @@ const createProduct = asyncHandler(async (req, res) => {
     // ✅ create product
     const product = await productModel.create({
         title,
+        description,
         price: cleanedPrice,
         stock,
         category: categoryDoc._id,
@@ -67,6 +67,54 @@ const createProduct = asyncHandler(async (req, res) => {
         .json(new ApiResponse(201, product, "Product created successfully"));
 });
 
+const editProduct = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { title, description, price, stock, category, rating } = req.body;
+
+    // ✅ validate fields
+    if (!title?.trim() || price == null || stock == null || description == null) {
+        throw new ApiError(400, "All required fields are mandatory");
+    }
+
+    const imagePaths = req.files?.images?.map(f => f.path) || [];
+
+    const uploadedImages = [];
+
+    for (const path of imagePaths) {
+        const uploaded = await uploadOnCloudinary(path);
+        // console.log(uploaded);
+
+        if (uploaded?.secure_url) uploadedImages.push(uploaded.secure_url);
+    }
+
+    let cleanedPrice = String(price).replace(/[^\d.]/g, "");
+    cleanedPrice = parseFloat(cleanedPrice);
+
+    // console.log(imagePaths);
+
+    const product = await productModel.findByIdAndUpdate(id,
+        {
+            title,
+            description,
+            price: cleanedPrice,
+            stock,
+            images: uploadedImages,
+            rating,
+        },
+        {
+            new: true, // return the updated document
+            runValidators: true, // validate schema
+        }
+    );
+
+    if (!product) {
+        throw new ApiError(404, "Product not found");
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, product, "Product updated successfully"));
+})
 
 const deleteProduct = asyncHandler(async (req, res) => {
     const { id } = req.params;
@@ -85,4 +133,6 @@ const deleteProduct = asyncHandler(async (req, res) => {
 })
 
 
-export { createProduct, deleteProduct };
+
+
+export { createProduct, deleteProduct, editProduct };
