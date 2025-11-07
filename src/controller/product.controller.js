@@ -132,7 +132,83 @@ const deleteProduct = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, product, "Product deleted successfully"))
 })
 
+const getAllProducts = asyncHandler(async (req, res) => {
+    const { search, category, minPrice, maxPrice, page, limit = 10 } = req.query
+
+    const query = {};
+
+    if (search) {
+        query.title = { $regex: search, $options: "i" };
+    }
+
+    if (minPrice || maxPrice) {
+        query.price = {};
+
+        if (minPrice) query.price.$gte = parseFloat(minPrice);
+        if (maxPrice) query.price.$lte = parseFloat(maxPrice);
+
+    }
+
+    if (category) {
+        const categoryDoc = await Category.findOne({
+            categoryName: { $regex: category, $options: "i" } // case-insensitive match
+        });
+        if (categoryDoc) query.category = categoryDoc._id;
+    }
 
 
+    const skip = (page - 1) * limit;
 
-export { createProduct, deleteProduct, editProduct };
+    const products = await productModel
+        .find(query)
+        .populate("category", "name")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+
+    const total = await productModel.countDocuments(query);
+
+    console.log(query);
+
+
+    return res.status(200).json(
+        new ApiResponse(200,
+            {
+                products,
+                total,
+                totalPages: Math.ceil(total / limit),
+                currentPage: parseInt(page),
+            })
+    )
+})
+
+const getProductById = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const product = await productModel.findById(id).populate("category", "categoryName")
+
+    if (!product) {
+        throw new ApiError(404, "Product not found")
+    }
+
+    return res.status(200)
+        .json(new ApiResponse(200, product, "Product fetched successfully"))
+})
+
+const getAllCategories = asyncHandler(async (req, res) => {
+    const category = await Category.find().sort({ name: 1 });
+
+    return res.status(200).json(new ApiResponse(200, category, "Categories fetched successfully"))
+})
+
+const deleteCategories = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const category = await Category.findByIdAndDelete(id);
+    if (!category) throw new ApiError(404, "Category not found")
+
+    return res.status(200)
+        .json(new ApiResponse(200, category, "Category deleted successfully"))
+})
+
+export { createProduct, deleteProduct, editProduct, getAllProducts, getProductById, getAllCategories, deleteCategories };
