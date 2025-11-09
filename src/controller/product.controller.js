@@ -6,7 +6,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const createProduct = asyncHandler(async (req, res) => {
-    const { title, description, price, stock, category, rating } = req.body
+    const { title, description, price, stock, categorys, rating } = req.body
 
     // ✅ validate fields
     if (!title?.trim() || price == null || stock == null) {
@@ -37,11 +37,13 @@ const createProduct = asyncHandler(async (req, res) => {
     }
 
     // ✅ Handle Category (Important Part)
-    let categoryDoc = await Category.findOne({ name: category });
-
+    const categoryDoc = await Category.findOne({ categoryName: categorys });
+    console.log(categoryDoc);
+    
     if (!categoryDoc) {
-        categoryDoc = await Category.create({ name: category });
+        throw new ApiError(404, `Category not found`);
     }
+
 
     let cleanedPrice = String(price).replace(/[^\d.]/g, "");
     cleanedPrice = parseFloat(cleanedPrice);
@@ -53,7 +55,7 @@ const createProduct = asyncHandler(async (req, res) => {
         description,
         price: cleanedPrice,
         stock,
-        category: categoryDoc._id,
+        categorys: categoryDoc._id,
         images: uploadedImages,
         rating,
     });
@@ -69,7 +71,7 @@ const createProduct = asyncHandler(async (req, res) => {
 
 const editProduct = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { title, description, price, stock, category, rating } = req.body;
+    const { title, description, price, stock, categorys, rating } = req.body;
 
     // ✅ validate fields
     if (!title?.trim() || price == null || stock == null || description == null) {
@@ -133,7 +135,7 @@ const deleteProduct = asyncHandler(async (req, res) => {
 })
 
 const getAllProducts = asyncHandler(async (req, res) => {
-    const { search, category, minPrice, maxPrice, page, limit = 10 } = req.query
+    const { search, categorys, minPrice, maxPrice, page, limit = 10 } = req.query
 
     const query = {};
 
@@ -149,9 +151,9 @@ const getAllProducts = asyncHandler(async (req, res) => {
 
     }
 
-    if (category) {
+    if (categorys) {
         const categoryDoc = await Category.findOne({
-            categoryName: { $regex: category, $options: "i" } // case-insensitive match
+            categoryName: { $regex: categorys, $options: "i" } // case-insensitive match
         });
         if (categoryDoc) query.category = categoryDoc._id;
     }
@@ -195,20 +197,8 @@ const getProductById = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, product, "Product fetched successfully"))
 })
 
-const getAllCategories = asyncHandler(async (req, res) => {
-    const category = await Category.find().sort({ name: 1 });
 
-    return res.status(200).json(new ApiResponse(200, category, "Categories fetched successfully"))
-})
 
-const deleteCategories = asyncHandler(async (req, res) => {
-    const { id } = req.params;
 
-    const category = await Category.findByIdAndDelete(id);
-    if (!category) throw new ApiError(404, "Category not found")
 
-    return res.status(200)
-        .json(new ApiResponse(200, category, "Category deleted successfully"))
-})
-
-export { createProduct, deleteProduct, editProduct, getAllProducts, getProductById, getAllCategories, deleteCategories };
+export { createProduct, deleteProduct, editProduct, getAllProducts, getProductById };

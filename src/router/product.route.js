@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createProduct, deleteCategories, deleteProduct, editProduct, getAllCategories, getAllProducts, getProductById } from "../controller/product.controller.js";
+import { createProduct, deleteProduct, editProduct, getAllProducts, getProductById } from "../controller/product.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
 
 const router = Router();
@@ -23,7 +23,6 @@ router.route('/edit-product/:id').patch(upload.fields([
 router.route('/delete-product/:id').delete(deleteProduct)
 router.route('/getAllProsuct').get(getAllProducts)
 router.route('/getAllProducts/:id').get(getProductById)
-router.route('/getAllCategories').get(getAllCategories)
-router.route('/deleteCategories/:id').delete(deleteCategories)
+
 
 export default router 
